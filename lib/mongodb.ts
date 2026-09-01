@@ -1,4 +1,11 @@
+import dns from "dns";
 import { MongoClient } from "mongodb";
+
+// Some Windows setups misreport the system DNS server to Node's resolver,
+// which breaks the SRV lookup required by mongodb+srv:// URIs (ECONNREFUSED
+// on querySrv even though the OS resolver works fine). Force known-good
+// public resolvers so the SRV/TXT lookup doesn't depend on that.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const uri = process.env.MONGODB_URI;
 if (!uri) throw new Error("Missing MONGODB_URI env var");
