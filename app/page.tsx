@@ -122,6 +122,22 @@ export default function Home() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Prefill dari query string (link BC GHL): ?nama=...&hp=...&email=...
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const nama = q.get("nama") ?? q.get("name") ?? "";
+    const hp = q.get("hp") ?? q.get("phone") ?? "";
+    const email = q.get("email") ?? "";
+    // +6281.. / 6281.. -> 081..
+    const localHp = hp.trim().replace(/[\s-]/g, "").replace(/^\+?62/, "0");
+    setForm((prev) => ({
+      ...prev,
+      namaLengkap: nama || prev.namaLengkap,
+      noTelepon: localHp || prev.noTelepon,
+      email: email || prev.email,
+    }));
+  }, []);
+
   useEffect(() => {
     fetch(`${WILAYAH_API}/provinces.json`)
       .then((res) => res.json())
