@@ -19,6 +19,7 @@ import {
   Ruler,
   Loader2,
   CheckCircle2,
+  MessageCircle,
   AtSign,
   Activity,
   Watch,
@@ -68,6 +69,9 @@ const initialForm = {
 
 type FormState = typeof initialForm;
 const MAX_UPLOADS = 5;
+const WA_HELP_URL = `https://wa.me/6282119227871?text=${encodeURIComponent(
+  "Saya mau tanya seputar topsellrun 2026"
+)}`;
 type UploadField = "buktiTransfer" | "fotoPb" | "fotoPortofolio";
 
 function Field({
@@ -293,12 +297,15 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
           <p className="mt-2 text-sm text-slate-500">
             Data kamu sudah tersimpan. Sampai jumpa di garis start!
           </p>
-          <button
-            onClick={() => setStatus("idle")}
-            className="mt-6 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+          <p className="mt-6 text-sm text-slate-500">Butuh bantuan?</p>
+          <a
+            href={WA_HELP_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
           >
-            {pacer ? "Daftar Pacer Lain" : "Daftar Peserta Lain"}
-          </button>
+            <MessageCircle className="h-4 w-4" /> Hubungi Kami via WhatsApp
+          </a>
         </div>
       </main>
     );
@@ -365,6 +372,9 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
             <Field label="Nomor Telepon" required icon={Phone}>
               <input
                 required
+                inputMode="numeric"
+                pattern="08[0-9]{7,13}"
+                title="Nomor harus diawali 08 dan hanya angka, mis. 081234567890"
                 placeholder="cth: 081234xxx"
                 className={inputClass}
                 value={form.noTelepon}
@@ -566,6 +576,9 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
             <Field label="Telp Kontak Darurat" required icon={Phone}>
               <input
                 required
+                inputMode="numeric"
+                pattern="08[0-9]{7,13}"
+                title="Nomor harus diawali 08 dan hanya angka, mis. 081234567890"
                 placeholder="081xxx"
                 className={inputClass}
                 value={form.telpKontakDarurat}
@@ -577,7 +590,11 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
               <Field label="No. KTP" required icon={IdCard}>
                 <input
                   required
-                  placeholder="Masukan No. KTP"
+                  inputMode="numeric"
+                  pattern="[0-9]{16}"
+                  maxLength={16}
+                  title="No. KTP harus 16 digit angka"
+                  placeholder="Masukan No. KTP (16 digit)"
                   className={inputClass}
                   value={form.noKtp}
                   onChange={(e) => update("noKtp", e.target.value)}

@@ -49,6 +49,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const PHONE = /^08\d{7,13}$/;
+  if (!PHONE.test(body.noTelepon)) {
+    return NextResponse.json({ error: "Nomor telepon harus diawali 08." }, { status: 400 });
+  }
+  if (!PHONE.test(body.telpKontakDarurat)) {
+    return NextResponse.json(
+      { error: "Telp kontak darurat harus diawali 08." },
+      { status: 400 }
+    );
+  }
+  if (!/^\S+@\S+$/.test(body.email)) {
+    return NextResponse.json({ error: "Email tidak valid." }, { status: 400 });
+  }
+  if (!/^\d{16}$/.test(body.noKtp)) {
+    return NextResponse.json({ error: "No. KTP harus 16 digit angka." }, { status: 400 });
+  }
+
   const client = await clientPromise;
   const db = client.db();
   const participants = db.collection(isPacer ? "pacers" : "participants");
