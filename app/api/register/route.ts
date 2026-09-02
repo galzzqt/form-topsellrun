@@ -5,10 +5,20 @@ const REQUIRED_FIELDS = [
   "email",
   "namaLengkap",
   "noTelepon",
+  "alamat",
   "provinsi",
+  "kotaKabupaten",
+  "kecamatan",
   "ukuranJersey",
   "kategoriTiket",
+  "namaBib",
+  "tanggalLahir",
+  "jenisKelamin",
+  "golonganDarah",
+  "namaKontakDarurat",
+  "telpKontakDarurat",
   "noKtp",
+  "buktiTransfer",
 ] as const;
 
 export async function POST(req: NextRequest) {
@@ -47,6 +57,7 @@ export async function POST(req: NextRequest) {
     namaKontakDarurat: body.namaKontakDarurat ?? "",
     telpKontakDarurat: body.telpKontakDarurat ?? "",
     noKtp: body.noKtp,
+    buktiTransfer: body.buktiTransfer,
     createdAt: new Date(),
   };
 

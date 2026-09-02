@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   Mail,
   User,
@@ -14,15 +15,16 @@ import {
   HeartPulse,
   UserPlus,
   IdCard,
+  Receipt,
+  Ruler,
   Loader2,
   CheckCircle2,
 } from "lucide-react";
 
-const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const JERSEY_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
 const TICKET_CATEGORIES = [
-  { value: "6K", label: "6K - Rp 149,000" },
-  { value: "10K", label: "10K - Rp 199,000" },
-  { value: "21K", label: "21K - Rp 299,000" },
+  { value: "3K", label: "3K" },
+  { value: "6K", label: "6K" },
 ];
 
 // Free public API for Indonesian administrative regions, no key required.
@@ -49,6 +51,7 @@ const initialForm = {
   namaKontakDarurat: "",
   telpKontakDarurat: "",
   noKtp: "",
+  buktiTransfer: "",
 };
 
 type FormState = typeof initialForm;
@@ -67,7 +70,7 @@ function Field({
   return (
     <label className="block">
       <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-700">
-        <Icon className="h-4 w-4 text-teal-600" />
+        <Icon className="h-4 w-4 text-orange-600" />
         {label}
         {required && <span className="text-rose-500">*</span>}
       </span>
@@ -77,7 +80,7 @@ function Field({
 }
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
+  "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
 
 export default function Home() {
   const [form, setForm] = useState<FormState>(initialForm);
@@ -90,6 +93,30 @@ export default function Home() {
   const [provinceId, setProvinceId] = useState("");
   const [regencyId, setRegencyId] = useState("");
   const [districtId, setDistrictId] = useState("");
+  const sizeChartRef = useRef<HTMLDialogElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message ?? "Upload gagal.");
+      update("buktiTransfer", data.secure_url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload gagal.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -166,14 +193,14 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-teal-500" />
+          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-orange-500" />
           <h1 className="text-xl font-semibold text-slate-900">Pendaftaran Berhasil</h1>
           <p className="mt-2 text-sm text-slate-500">
             Data kamu sudah tersimpan. Sampai jumpa di garis start!
           </p>
           <button
             onClick={() => setStatus("idle")}
-            className="mt-6 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700"
+            className="mt-6 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
           >
             Daftar Peserta Lain
           </button>
@@ -184,20 +211,28 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 pb-16">
-      <div className="bg-gradient-to-br from-teal-600 to-slate-900 px-4 py-10 text-white">
-        <div className="mx-auto max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-teal-300">
-            Formulir Pendaftaran
+      <div className="bg-white px-4 py-8">
+        <div className="mx-auto max-w-[1200px]">
+          <Image
+            src="/images/hero.png"
+            alt="TOPSELL x SAMSUNG Run for Changes 2026"
+            width={1645}
+            height={300}
+            priority
+            className="w-full rounded-xl"
+          />
+          <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-orange-600">
+            Form Pendaftaran
           </p>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
-            TOPSELL x SAMSUNG Run for Changes 2026
+          <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
+            Run for Changes 2026
           </h1>
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-200">
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" /> 18 Oktober 2026
+              <Calendar className="h-4 w-4 text-orange-600" /> 18 Oktober 2026
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" /> Sunrise Mall Mojokerto
+              <MapPin className="h-4 w-4 text-orange-600" /> Sunrise Mall Mojokerto
             </span>
           </div>
         </div>
@@ -205,7 +240,7 @@ export default function Home() {
 
       <form
         onSubmit={handleSubmit}
-        className="mx-auto -mt-6 max-w-3xl space-y-6 px-4"
+        className="mx-auto max-w-[1200px] space-y-6 px-4"
       >
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-slate-900">Data Peserta</h2>
@@ -239,9 +274,10 @@ export default function Home() {
                 onChange={(e) => update("noTelepon", e.target.value)}
               />
             </Field>
-            <Field label="Tanggal Lahir" icon={Calendar}>
+            <Field label="Tanggal Lahir" required icon={Calendar}>
               <input
                 type="date"
+                required
                 className={inputClass}
                 value={form.tanggalLahir}
                 onChange={(e) => update("tanggalLahir", e.target.value)}
@@ -249,8 +285,9 @@ export default function Home() {
             </Field>
 
             <div className="sm:col-span-2">
-              <Field label="Alamat" icon={MapPin}>
+              <Field label="Alamat" required icon={MapPin}>
                 <textarea
+                  required
                   rows={2}
                   placeholder="Masukkan alamat lengkap Anda"
                   className={inputClass}
@@ -275,8 +312,9 @@ export default function Home() {
                 ))}
               </select>
             </Field>
-            <Field label="Kota/Kabupaten" icon={MapPin}>
+            <Field label="Kota/Kabupaten" required icon={MapPin}>
               <select
+                required
                 className={inputClass}
                 value={regencyId}
                 disabled={!provinceId}
@@ -290,8 +328,9 @@ export default function Home() {
                 ))}
               </select>
             </Field>
-            <Field label="Kecamatan" icon={MapPin}>
+            <Field label="Kecamatan" required icon={MapPin}>
               <select
+                required
                 className={inputClass}
                 disabled={!regencyId}
                 value={districtId}
@@ -306,21 +345,44 @@ export default function Home() {
               </select>
             </Field>
 
-            <Field label="Ukuran Jersey" required icon={Shirt}>
-              <select
-                required
-                className={inputClass}
-                value={form.ukuranJersey}
-                onChange={(e) => update("ukuranJersey", e.target.value)}
+            <div>
+              <Field label="Ukuran Jersey" required icon={Shirt}>
+                <select
+                  required
+                  className={inputClass}
+                  value={form.ukuranJersey}
+                  onChange={(e) => update("ukuranJersey", e.target.value)}
+                >
+                  <option value="">--Pilih Ukuran Jersey--</option>
+                  {JERSEY_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <button
+                type="button"
+                onClick={() => sizeChartRef.current?.showModal()}
+                className="mt-1.5 flex items-center gap-1 text-xs font-medium text-orange-600 hover:underline"
               >
-                <option value="">--Pilih Ukuran Jersey--</option>
-                {JERSEY_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </Field>
+                <Ruler className="h-3.5 w-3.5" /> Lihat Size Chart
+              </button>
+              <dialog
+                ref={sizeChartRef}
+                onClick={(e) => e.currentTarget === e.target && sizeChartRef.current?.close()}
+                className="m-auto max-w-[95vw] rounded-xl p-0 backdrop:bg-black/50"
+              >
+                <Image
+                  src="/images/size.jpg"
+                  alt="Size chart jersey"
+                  width={900}
+                  height={300}
+                  loading="eager"
+                  className="h-auto w-[900px] max-w-full"
+                />
+              </dialog>
+            </div>
 
             <Field label="Pilih Kategori Tiket" required icon={Ticket}>
               <select
@@ -337,16 +399,18 @@ export default function Home() {
               </select>
             </Field>
 
-            <Field label="Nama BIB" icon={IdCard}>
+            <Field label="Nama BIB" required icon={IdCard}>
               <input
+                required
                 placeholder="Enter BIB Name"
                 className={inputClass}
                 value={form.namaBib}
                 onChange={(e) => update("namaBib", e.target.value)}
               />
             </Field>
-            <Field label="Jenis Kelamin" icon={Users}>
+            <Field label="Jenis Kelamin" required icon={Users}>
               <select
+                required
                 className={inputClass}
                 value={form.jenisKelamin}
                 onChange={(e) => update("jenisKelamin", e.target.value)}
@@ -356,8 +420,9 @@ export default function Home() {
               </select>
             </Field>
 
-            <Field label="Golongan Darah" icon={Droplet}>
+            <Field label="Golongan Darah" required icon={Droplet}>
               <select
+                required
                 className={inputClass}
                 value={form.golonganDarah}
                 onChange={(e) => update("golonganDarah", e.target.value)}
@@ -392,16 +457,18 @@ export default function Home() {
               </Field>
             </div>
 
-            <Field label="Nama Kontak Darurat" icon={UserPlus}>
+            <Field label="Nama Kontak Darurat" required icon={UserPlus}>
               <input
+                required
                 placeholder="Nama Kontak Darurat"
                 className={inputClass}
                 value={form.namaKontakDarurat}
                 onChange={(e) => update("namaKontakDarurat", e.target.value)}
               />
             </Field>
-            <Field label="Telp Kontak Darurat" icon={Phone}>
+            <Field label="Telp Kontak Darurat" required icon={Phone}>
               <input
+                required
                 placeholder="081xxx"
                 className={inputClass}
                 value={form.telpKontakDarurat}
@@ -420,6 +487,33 @@ export default function Home() {
                 />
               </Field>
             </div>
+
+            <div className="sm:col-span-2">
+              <Field label="Bukti Transfer / Invoice Pembayaran" required icon={Receipt}>
+                <input
+                  type="file"
+                  required={!form.buktiTransfer}
+                  accept="image/*"
+                  className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-orange-700`}
+                  onChange={(e) => handleUpload(e.target.files?.[0])}
+                />
+              </Field>
+              {uploading && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Mengunggah...
+                </p>
+              )}
+              {form.buktiTransfer && !uploading && (
+                <a
+                  href={form.buktiTransfer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-orange-600 hover:underline"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Bukti terunggah — lihat file
+                </a>
+              )}
+            </div>
           </div>
         </section>
 
@@ -431,8 +525,8 @@ export default function Home() {
 
         <button
           type="submit"
-          disabled={status === "submitting"}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={status === "submitting" || uploading}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === "submitting" && <Loader2 className="h-4 w-4 animate-spin" />}
           {status === "submitting" ? "Mengirim..." : "Daftar Sekarang"}
