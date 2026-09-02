@@ -30,6 +30,10 @@ const PACER_FIELDS = [
   "fotoPortofolio",
 ] as const;
 
+// Default GHL webhook untuk pendaftaran pacer; override lewat GHL_PACER_WEBHOOK_URL.
+const PACER_WEBHOOK_URL =
+  "https://services.leadconnectorhq.com/hooks/FCXCaXzwNxN3BXWaoDM6/webhook-trigger/0ae0f648-9613-45ed-9d6e-e83ab93a528e";
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
@@ -90,7 +94,7 @@ export async function POST(req: NextRequest) {
   const result = await participants.insertOne(doc);
 
   const webhookUrl = isPacer
-    ? process.env.GHL_PACER_WEBHOOK_URL ?? process.env.GHL_WEBHOOK_URL
+    ? process.env.GHL_PACER_WEBHOOK_URL ?? PACER_WEBHOOK_URL
     : process.env.GHL_WEBHOOK_URL;
   if (webhookUrl) {
     // ponytail: fire-and-forget, don't block the response on GHL being up

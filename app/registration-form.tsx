@@ -587,7 +587,7 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
 
             {!pacer && (
               <div className="sm:col-span-2">
-                {uploadField("buktiTransfer", "Bukti Transfer / Invoice Pembayaran", Receipt)}
+                {uploadField("buktiTransfer", "Bukti Transfer", Receipt)}
               </div>
             )}
 
