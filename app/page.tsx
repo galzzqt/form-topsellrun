@@ -122,12 +122,13 @@ export default function Home() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Prefill dari query string (link BC GHL): ?nama=...&hp=...&email=...
+  // Prefill dari query string (link BC GHL): ?nama=...&hp=...&email=...&kategori=3K
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const nama = q.get("nama") ?? q.get("name") ?? "";
     const hp = q.get("hp") ?? q.get("phone") ?? "";
     const email = q.get("email") ?? "";
+    const kategori = (q.get("kategori") ?? "").trim().toUpperCase();
     // +6281.. / 6281.. -> 081..
     const localHp = hp.trim().replace(/[\s-]/g, "").replace(/^\+?62/, "0");
     setForm((prev) => ({
@@ -135,6 +136,9 @@ export default function Home() {
       namaLengkap: nama || prev.namaLengkap,
       noTelepon: localHp || prev.noTelepon,
       email: email || prev.email,
+      kategoriTiket: TICKET_CATEGORIES.some((c) => c.value === kategori)
+        ? kategori
+        : prev.kategoriTiket,
     }));
   }, []);
 
