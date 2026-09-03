@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import type { Collection, ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
 const REQUIRED_FIELDS = [
@@ -33,6 +34,54 @@ const PACER_FIELDS = [
 // Default GHL webhook untuk pendaftaran pacer; override lewat GHL_PACER_WEBHOOK_URL.
 const PACER_WEBHOOK_URL =
   "https://services.leadconnectorhq.com/hooks/FCXCaXzwNxN3BXWaoDM6/webhook-trigger/0ae0f648-9613-45ed-9d6e-e83ab93a528e";
+
+// Total percobaan dijaga di bawah ~9 detik supaya muat dalam batas durasi function.
+const WEBHOOK_TIMEOUT_MS = 4000;
+const WEBHOOK_ATTEMPTS = 3;
+
+// ponytail: antrian ini hanya berlaku dalam satu instance function. Di serverless
+// tiap request bisa dapat instance sendiri, jadi ini meredam lonjakan lokal, bukan
+// menjamin urutan global. Kalau nanti butuh urutan lintas instance, pindahkan ke
+// antrian di luar proses (mis. koleksi outbox + cron).
+let queue: Promise<unknown> = Promise.resolve();
+function enqueue(job: () => Promise<void>) {
+  queue = queue.then(job, job);
+  return queue;
+}
+
+// Hasil kirim dicatat di dokumen supaya kegagalan tidak hilang diam-diam dan
+// bisa dikirim ulang belakangan. Dicatat SETELAH kirim, jadi payload tetap sama.
+async function deliver(
+  url: string,
+  payload: unknown,
+  collection: Collection,
+  id: ObjectId
+) {
+  let lastError = "tidak diketahui";
+  for (let attempt = 1; attempt <= WEBHOOK_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+      });
+      if (res.ok) {
+        await collection.updateOne({ _id: id }, { $set: { webhookSentAt: new Date() } });
+        return;
+      }
+      lastError = `HTTP ${res.status}`;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+    }
+    console.error(`Webhook percobaan ${attempt}/${WEBHOOK_ATTEMPTS} gagal:`, lastError);
+    if (attempt < WEBHOOK_ATTEMPTS) await new Promise((r) => setTimeout(r, 400 * attempt));
+  }
+  await collection.updateOne(
+    { _id: id },
+    { $set: { webhookError: lastError, webhookFailedAt: new Date() } }
+  );
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -114,12 +163,10 @@ export async function POST(req: NextRequest) {
     ? process.env.GHL_PACER_WEBHOOK_URL ?? PACER_WEBHOOK_URL
     : process.env.GHL_WEBHOOK_URL;
   if (webhookUrl) {
-    // ponytail: fire-and-forget, don't block the response on GHL being up
-    fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...doc, _id: result.insertedId }),
-    }).catch((err) => console.error("GHL webhook failed:", err));
+    // after() menahan function tetap hidup sampai pengiriman selesai — tanpa ini
+    // request-nya ikut mati begitu response dikembalikan di serverless.
+    const payload = { ...doc, _id: result.insertedId };
+    after(() => enqueue(() => deliver(webhookUrl, payload, participants, result.insertedId)));
   }
 
   return NextResponse.json({ ok: true, id: result.insertedId });

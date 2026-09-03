@@ -2,6 +2,7 @@
 // Pemakaian:
 //   node kirim-webhook.mjs --only-dummy     -> hanya data dummy tes
 //   node kirim-webhook.mjs --dry            -> tampilkan saja, tidak mengirim
+//   node kirim-webhook.mjs --gagal          -> hanya yang webhook-nya belum sukses
 //   node kirim-webhook.mjs                  -> semua peserta asli (dummy dilewati)
 import fs from "fs";
 import { MongoClient } from "mongodb";
@@ -13,10 +14,15 @@ const JEDA_MS = 400;
 
 const onlyDummy = process.argv.includes("--only-dummy");
 const dry = process.argv.includes("--dry");
+const hanyaGagal = process.argv.includes("--gagal");
 
 const uri = fs.readFileSync(".env.local", "utf8").match(/MONGODB_URI="?([^"\n]+)"?/)[1];
 const client = await new MongoClient(uri).connect();
-const filter = onlyDummy ? { email: DUMMY } : { email: { $ne: DUMMY } };
+const filter = onlyDummy
+  ? { email: DUMMY }
+  : hanyaGagal
+    ? { email: { $ne: DUMMY }, webhookSentAt: { $exists: false } }
+    : { email: { $ne: DUMMY } };
 const docs = await client
   .db()
   .collection("participants")
@@ -35,11 +41,14 @@ for (const [i, doc] of docs.entries()) {
     continue;
   }
   try {
-    // Dikirim apa adanya, persis bentuk yang dipakai route pendaftaran.
+    // Field status pengiriman dibuang supaya payload persis sama dengan
+    // yang dikirim route pendaftaran.
+    const { webhookSentAt, webhookError, webhookFailedAt, ...payload } = doc;
+    void webhookSentAt, webhookError, webhookFailedAt;
     const res = await fetch(WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(doc),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(20_000),
     });
     const body = (await res.text()).slice(0, 80);
