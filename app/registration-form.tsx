@@ -69,6 +69,38 @@ const initialForm = {
 
 type FormState = typeof initialForm;
 const MAX_UPLOADS = 5;
+
+// Vercel menolak body > ~4.5 MB, sementara foto HP biasa 3-8 MB. Sisi terpanjang
+// dipangkas ke 2000px: masih jelas terbaca untuk bukti transfer, ukurannya jatuh
+// jauh di bawah batas. Kalau format-nya tidak bisa dibaca browser (mis. HEIC),
+// file asli dipakai apa adanya.
+const MAX_DIMENSION = 2000;
+
+async function shrink(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size <= 3_000_000) {
+      bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85)
+    );
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 const WA_HELP_URL = `https://wa.me/6282119227871?text=${encodeURIComponent(
   "Saya mau tanya seputar topsellrun 2026"
 )}`;
@@ -132,10 +164,22 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
       const uploaded: string[] = [];
       for (const file of picked) {
         const body = new FormData();
-        body.append("file", file);
+        body.append("file", await shrink(file));
         const res = await fetch("/api/upload", { method: "POST", body });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Upload gagal.");
+        // Batas body Vercel dibalas teks biasa, bukan JSON — jangan sampai
+        // pesan aslinya tertutup error parsing.
+        const raw = await res.text();
+        let data: { url?: string; error?: string };
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(
+            res.status === 413
+              ? "Ukuran gambar terlalu besar. Coba foto dengan resolusi lebih kecil."
+              : `Upload gagal (${res.status}).`
+          );
+        }
+        if (!res.ok || !data.url) throw new Error(data.error ?? "Upload gagal.");
         uploaded.push(data.url);
       }
       update(field, [...existing, ...uploaded].join(","));
