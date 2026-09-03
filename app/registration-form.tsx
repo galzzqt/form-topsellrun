@@ -133,10 +133,14 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
       for (const file of picked) {
         const body = new FormData();
         body.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body });
+        body.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          { method: "POST", body }
+        );
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Upload gagal.");
-        uploaded.push(data.url);
+        if (!res.ok) throw new Error(data.error?.message ?? "Upload gagal.");
+        uploaded.push(data.secure_url);
       }
       update(field, [...existing, ...uploaded].join(","));
     } catch (err) {
