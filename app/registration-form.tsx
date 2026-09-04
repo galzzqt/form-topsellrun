@@ -27,7 +27,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 
-const JERSEY_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
 const TICKET_CATEGORIES = [
   { value: "3K", label: "3K" },
   { value: "6K", label: "6K" },
@@ -500,7 +500,7 @@ export default function RegistrationForm({ pacer = false }: { pacer?: boolean })
                   value={form.ukuranJersey}
                   onChange={(e) => update("ukuranJersey", e.target.value)}
                 >
-                  <option value="">--Pilih Ukuran Jersey--</option>
+                  <option value="">--Pilih --</option>
                   {JERSEY_SIZES.map((size) => (
                     <option key={size} value={size}>
                       {size}
